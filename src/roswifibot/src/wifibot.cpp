@@ -8,8 +8,8 @@
 Wifibot::Wifibot()
   : _nh_private("~")
   , _updated(false)
-  , _speedLeft(0.0)
-  , _speedRight(0.0)
+  , _speedLeft(0)
+  , _speedRight(0)
 {
   // Parameters handler
   ros::NodeHandle pn("~");
@@ -42,6 +42,13 @@ Wifibot::Wifibot()
   pn.param("relay1", relay1, true);
   pn.param("relay2", relay2, true);
   pn.param("relay3", relay3, true);
+
+  std::string topic_out;
+  // Example parameter  
+  pn.param<std::string>("odom_topic_out", topic_out, "odom");
+
+  std::cout << topic_out << std::endl;
+
   pn.param("battery_min_voltage", _batteryMinVoltage, 10.5);
   pn.param("battery_max_voltage", _batteryMaxVoltage, 12.1);
 
@@ -70,15 +77,18 @@ Wifibot::Wifibot()
   _pubRobotBatteryVoltage = _nh.advertise<std_msgs::Float32>("robot_battery_voltage", 1);
   _pubComputerBatteryVoltage = _nh.advertise<std_msgs::Float32>("computer_battery_voltage", 1);
   _pubIsCharging = _nh.advertise<std_msgs::Bool>("is_charging", 1);
+  
 
   _subSpeeds = _nh.subscribe("cmd_vel", 1, &Wifibot::velocityCallback, this);
 
   _timeCurrent = ros::Time::now();
   _timeLast = ros::Time::now();
+ 
 }
 
 Wifibot::~Wifibot()
 {
+  
   delete _pDriver;
 }
 
@@ -98,9 +108,10 @@ void Wifibot::computeOdometry(double left, double right)
   double dright = right - _odometryRightLast;
 
   double distance = getSpeedLinear(dleft, dright);
+  _position.th += getSpeedAngular(dleft, dright)*3.0/4.0;
 
-  _position.th += getSpeedAngular(dleft, dright);
-  _position.th -= (float)((int)(_position.th / TWOPI)) * TWOPI;
+  //_position.th -= (float)((int)(_position.th / TWOPI)) * TWOPI;
+  //_position.th -= (float) ((int) _position.th % (int) (2*M_PI));
 
   _position.x += distance * cos(_position.th);
   _position.y += distance * sin(_position.th);
@@ -143,8 +154,13 @@ void Wifibot::update()
   topicStatus.speed_front_left = st.speedFrontLeft;
   topicStatus.speed_front_right = st.speedFrontRight;
 
-  topicStatus.odometry_left = st.odometryLeft;
-  topicStatus.odometry_right = st.odometryRight;
+  //AfficheOdometry();
+
+  float OdometryGauche = ((st.odometryLeft/0.064)*14*M_PI)/100; // en m
+	float OdometryDroite = ((st.odometryRight/0.064)*14*M_PI)/100;
+
+  topicStatus.odometry_left = OdometryGauche;
+  topicStatus.odometry_right = OdometryDroite;
   topicStatus.version = st.version;
   bool r1, r2, r3;
   _pDriver->getRelays(r1, r2, r3);
@@ -156,8 +172,8 @@ void Wifibot::update()
   if (_pubStatus.getNumSubscribers())
     _pubStatus.publish(topicStatus);
 
-  // compute position
-  computeOdometry(st.odometryLeft, st.odometryRight);
+// compute position
+  computeOdometry(OdometryGauche, OdometryDroite);
 
   //TRANSFORM we'll publish the transform over tf
   _odomTf.header.stamp = _timeCurrent;
@@ -168,7 +184,7 @@ void Wifibot::update()
   _odomTf.transform.translation.y = _position.y;
   _odomTf.transform.translation.z = 0.0;
   _odomTf.transform.rotation =
-      tf::createQuaternionMsgFromYaw(_position.th);
+      tf::createQuaternionMsgFromYaw(_position.th*5);
 
   //send the transform
   _odomBroadcast.sendTransform(_odomTf);
@@ -230,6 +246,28 @@ void Wifibot::update()
 
   // Update last time
   _timeLast = _timeCurrent;
+}
+
+void Wifibot::move(double left, double right){
+  _pDriver->setSpeeds(left, right);
+}
+
+void Wifibot::AfficheOdometry(){
+	wifibot::driverData st = _pDriver->readData();
+	
+  // Calculate x,y and theta
+	float OdometryGauche = (st.odometryLeft/0.064)*14*M_PI; // en Cm
+	float OdometryDroite = (st.odometryRight/0.064)*14*M_PI; //en Cm
+	
+  // Generate nav_msgs::Odometry message
+
+  // Publish on a topic odom_out
+  std::cout << "Odometry gauche = " << st.odometryLeft << std::endl;
+  std::cout << "Odometry droite = " << st.odometryRight << std::endl;
+	std::cout << "Odometry gauche = " << OdometryGauche << std::endl;
+	std::cout << "Odometry droite = " << OdometryDroite << std::endl << std::endl;
+
+
 }
 
 int main (int argc, char **argv) {

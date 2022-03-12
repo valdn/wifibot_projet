@@ -20,12 +20,12 @@
   <remap from="/ticks_out" to="/cmd_speed" />
   <node pkg="roswifibot" type="ros_speeds2ticks" name="ros_speed2ticks"
         output="screen"/>
-  -->
   <node pkg="turtlebot3_teleop" type="turtlebot3_teleop_key" name="teleop"
       output="screen">
   <param name="scale_linear" value="0.5" type="double"/>
   <param name="scale_angular" value="1.5" type="double"/>
   <remap from="/cmd_vel" to="/wifibot/cmd_vel"/>
   </node>
+  -->
 </group>
 </launch>

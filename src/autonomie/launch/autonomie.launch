@@ -1,0 +1,21 @@
+<launch>
+	<node name="usb_cam" pkg="usb_cam" type="usb_cam_node" output="screen" >
+	    <param name="video_device" value="/dev/video0" />
+	    <param name="image_width" value="640" />
+	    <param name="image_height" value="480" />
+	    <param name="pixel_format" value="yuyv" />
+	    <param name="camera_frame_id" value="usb_cam" />
+	    <param name="io_method" value="mmap"/>
+	</node>
+	<node name="autonomie_node" pkg="autonomie" type="autonomie_node" output="screen" >
+	</node>
+	<node pkg="roswifibot" type="wifibot_node" name="wifibot_node" required="true"
+        output="screen"
+        args="_port:=/dev/ttyS0
+              _base_frame:=wifibot_base_frame
+              _odom_frame:=wifibot_odom
+              _entrax:=.39
+              _relay1:=true
+              _relay2:=true
+              _relay3:=true"/>
+</launch>

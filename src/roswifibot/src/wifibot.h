@@ -20,6 +20,8 @@ class Wifibot {
 public:
   Wifibot();
   ~Wifibot();
+  void move(double left, double right);
+  void AfficheOdometry();
   void update();
 
 private:
@@ -29,11 +31,10 @@ private:
   double getSpeedAngular(double speedLeft, double speedRight);
 
   ros::NodeHandle _nh, _nh_private;
+  wifibot::Driver *_pDriver;
 
   geometry_msgs::TransformStamped _odomTf;
   tf::TransformBroadcaster _odomBroadcast;
-
-  wifibot::Driver *_pDriver;
 
   ros::Publisher _pubStatus;
   ros::Publisher _pubOdometry;
@@ -50,6 +51,8 @@ private:
   position _position;
   double _odometryLeftLast;
   double _odometryRightLast;
+  int OdomPrecGauche = 0;
+	int OdomPrecDroite = 0;
   double _entrax;
   bool _updated;
   double _speedLeft;
